@@ -1,0 +1,42 @@
+name: pv_neutral_abnahme_protokoll
+description: PV-Abnahmeprotokoll mit Spracheingabe, PDF-Erstellung und Unterschrift
+
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # PDF
+  pdf: ^3.11.1
+
+  # Speicherpfade
+  path_provider: ^2.1.5
+
+  # PDF öffnen
+  open_filex: ^4.7.0
+
+  # Spracheingabe
+  speech_to_text: ^7.0.0
+
+  # Berechtigungen
+  permission_handler: ^11.3.1
+
+  # Finger-Unterschrift
+  signature: ^5.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
