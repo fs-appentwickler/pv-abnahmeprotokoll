@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -49,6 +50,8 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
   static const Color green = Color(0xFF007A3D);
 
   final stt.SpeechToText speech = stt.SpeechToText();
+  final ImagePicker imagePicker = ImagePicker();
+  final List<File> visualInspectionPhotos = [];
 
   bool speechReady = false;
   bool isListening = false;
@@ -271,6 +274,35 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
     return count;
   }
 
+  Future<void> takeVisualInspectionPhoto() async {
+    final cameraStatus = await Permission.camera.request();
+
+    if (!cameraStatus.isGranted) {
+      showMessage('Kameraberechtigung fehlt. Bitte in den Android-Einstellungen erlauben.');
+      return;
+    }
+
+    final XFile? photo = await imagePicker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 75,
+      maxWidth: 1600,
+    );
+
+    if (photo == null) {
+      return;
+    }
+
+    setState(() {
+      visualInspectionPhotos.add(File(photo.path));
+    });
+  }
+
+  void removeVisualInspectionPhoto(int index) {
+    setState(() {
+      visualInspectionPhotos.removeAt(index);
+    });
+  }
+
   Future<void> createPdf() async {
     final pdf = pw.Document();
 
@@ -278,6 +310,13 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
     await technicianSignaturePad.toPngBytes();
     final Uint8List? customerSignatureBytes =
     await customerSignaturePad.toPngBytes();
+
+    final visualInspectionPhotoBytes = <Uint8List>[];
+    for (final photo in visualInspectionPhotos) {
+      if (await photo.exists()) {
+        visualInspectionPhotoBytes.add(await photo.readAsBytes());
+      }
+    }
 
     pdf.addPage(
       pw.MultiPage(
@@ -315,6 +354,31 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
           pdfCheck('Schutzmaßnahmen geprüft', protectionOk),
           pdfCheck('Warnhinweise / Beschilderung geprüft', warningSignsOk),
           pdfSection('Bemerkung Sichtprüfung', valueOf(visualNoteController)),
+          if (visualInspectionPhotoBytes.isNotEmpty) ...[
+            pw.SizedBox(height: 10),
+            pw.Text(
+              'Fotos Sichtprüfung',
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 6),
+            pw.Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: visualInspectionPhotoBytes.map((bytes) {
+                return pw.Container(
+                  width: 160,
+                  height: 120,
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(width: 0.5),
+                  ),
+                  child: pw.Image(
+                    pw.MemoryImage(bytes),
+                    fit: pw.BoxFit.cover,
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
 
           pw.SizedBox(height: 18),
           pw.Text('2. Erproben / Funktionsprüfung',
@@ -541,6 +605,7 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
 
       technicianSignaturePad.clear();
       customerSignaturePad.clear();
+      visualInspectionPhotos.clear();
     });
 
     customerController.clear();
@@ -681,6 +746,59 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
     );
   }
 
+  Widget visualPhotoSection() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FilledButton.icon(
+            onPressed: takeVisualInspectionPhoto,
+            icon: const Icon(Icons.camera_alt),
+            label: const Text('Foto zur Sichtprüfung aufnehmen'),
+          ),
+          if (visualInspectionPhotos.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: visualInspectionPhotos.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemBuilder: (context, index) {
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          visualInspectionPhotos[index],
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: IconButton.filledTonal(
+                        onPressed: () => removeVisualInspectionPhoto(index),
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Foto entfernen',
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget visualInspectionSection() {
     return Card(
       child: Column(
@@ -722,6 +840,7 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
               title: 'Warnhinweise / Beschilderung geprüft',
               value: warningSignsOk,
               onChanged: (v) => setState(() => warningSignsOk = v ?? false)),
+          visualPhotoSection(),
           Padding(
             padding: const EdgeInsets.all(16),
             child: inputField('Bemerkung Sichtprüfung', visualNoteController,
