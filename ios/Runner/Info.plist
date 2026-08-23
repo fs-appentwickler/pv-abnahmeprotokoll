@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Pv Neutral Abnahme Protoll</string>
+	<string>PV-Abnahmeprotokoll</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,38 +15,25 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>pv_neutral_abnahme_protoll</string>
+	<string>PV-Abnahmeprotokoll</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(FLUTTER_BUILD_NAME)</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>UIApplicationSceneManifest</key>
-	<dict>
-		<key>UIApplicationSupportsMultipleScenes</key>
-		<false/>
-		<key>UISceneConfigurations</key>
-		<dict>
-			<key>UIWindowSceneSessionRoleApplication</key>
-			<array>
-				<dict>
-					<key>UISceneClassName</key>
-					<string>UIWindowScene</string>
-					<key>UISceneConfigurationName</key>
-					<string>flutter</string>
-					<key>UISceneDelegateClassName</key>
-					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
-					<key>UISceneStoryboardFile</key>
-					<string>Main</string>
-				</dict>
-			</array>
-		</dict>
-	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Die Kamera wird benötigt, um Fotos der PV-Anlage und der Installation aufzunehmen.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Das Mikrofon wird für die Spracheingabe des Prüfprotokolls verwendet.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Erstellte Fotos und PDF-Dokumente dürfen in der Fotomediathek gespeichert werden.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Die Fotomediathek wird benötigt, um Bilder für die Dokumentation auszuwählen.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Die Spracherkennung wird zur Eingabe von Prüfwerten und Bemerkungen verwendet.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

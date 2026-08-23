@@ -49,6 +49,14 @@ class PvAbnahmePage extends StatefulWidget {
 class _PvAbnahmePageState extends State<PvAbnahmePage> {
   static const Color green = Color(0xFF007A3D);
 
+  bool isEnglish = false;
+
+  String tr(String german, String english) => isEnglish ? english : german;
+
+  void toggleLanguage() {
+    setState(() => isEnglish = !isEnglish);
+  }
+
   final stt.SpeechToText speech = stt.SpeechToText();
   final ImagePicker imagePicker = ImagePicker();
   final List<File> visualInspectionPhotos = [];
@@ -77,10 +85,14 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
   final generalNoteController = TextEditingController();
   final resultNoteController = TextEditingController();
 
-  final SignatureController technicianSignaturePad =
-  SignatureController(penStrokeWidth: 3, penColor: Colors.black);
-  final SignatureController customerSignaturePad =
-  SignatureController(penStrokeWidth: 3, penColor: Colors.black);
+  final SignatureController technicianSignaturePad = SignatureController(
+    penStrokeWidth: 3,
+    penColor: Colors.black,
+  );
+  final SignatureController customerSignaturePad = SignatureController(
+    penStrokeWidth: 3,
+    penColor: Colors.black,
+  );
 
   bool modulesOk = false;
   bool cablesOk = false;
@@ -150,7 +162,12 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
     }
 
     if (!speechReady) {
-      showMessage('Spracheingabe nicht verfügbar. Bitte Mikrofonberechtigung prüfen.');
+      showMessage(
+        tr(
+          'Spracheingabe nicht verfügbar. Bitte Mikrofonberechtigung prüfen.',
+          'Voice input is unavailable. Please check the microphone permission.',
+        ),
+      );
       return;
     }
 
@@ -160,7 +177,7 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
     });
 
     await speech.listen(
-      localeId: 'de_DE',
+      localeId: isEnglish ? 'en_US' : 'de_DE',
       listenMode: stt.ListenMode.dictation,
       partialResults: true,
       onResult: (result) {
@@ -181,11 +198,17 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
   }
 
   String cleanSpeechText(String text) {
-    return text
+    final cleaned = text
         .replaceAll(' Komma ', ',')
         .replaceAll(' komma ', ',')
         .replaceAll(' Punkt ', ',')
-        .replaceAll(' punkt ', ',')
+        .replaceAll(' punkt ', ',');
+    return (isEnglish
+        ? cleaned
+        .replaceAll(' comma ', ',')
+        .replaceAll(' period ', '.')
+        .replaceAll(' full stop ', '.')
+        : cleaned)
         .trim();
   }
 
@@ -278,7 +301,12 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
     final cameraStatus = await Permission.camera.request();
 
     if (!cameraStatus.isGranted) {
-      showMessage('Kameraberechtigung fehlt. Bitte in den Android-Einstellungen erlauben.');
+      showMessage(
+        tr(
+          'Kameraberechtigung fehlt. Bitte in den Android-Einstellungen erlauben.',
+          'Camera permission is missing. Please allow it in the Android settings.',
+        ),
+      );
       return;
     }
 
@@ -306,10 +334,10 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
   Future<void> createPdf() async {
     final pdf = pw.Document();
 
-    final Uint8List? technicianSignatureBytes =
-    await technicianSignaturePad.toPngBytes();
-    final Uint8List? customerSignatureBytes =
-    await customerSignaturePad.toPngBytes();
+    final Uint8List? technicianSignatureBytes = await technicianSignaturePad
+        .toPngBytes();
+    final Uint8List? customerSignatureBytes = await customerSignaturePad
+        .toPngBytes();
 
     final visualInspectionPhotoBytes = <Uint8List>[];
     for (final photo in visualInspectionPhotos) {
@@ -322,42 +350,111 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
       pw.MultiPage(
         build: (context) => [
           pw.Text(
-            'PV-Abnahmeprotokoll',
+            tr('PV-Abnahmeprotokoll', 'PV Acceptance Report'),
             style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 6),
-          pw.Text('Sichtprüfung · Erproben · Messen · Unterschrift'),
-          pw.Text('PV-Anlagenprüfung nach DIN EN 62446'),
+          pw.Text(
+            tr(
+              'Sichtprüfung · Erproben · Messen · Unterschrift',
+              'Visual inspection · Functional testing · Measurements · Signatures',
+            ),
+          ),
+          pw.Text(
+            tr(
+              'PV-Anlagenprüfung nach DIN EN 62446',
+              'PV system inspection according to DIN EN 62446',
+            ),
+          ),
           pw.SizedBox(height: 20),
 
-          pdfSection('Kunde', valueOf(customerController)),
-          pdfSection('Objekt / Standort', valueOf(objectController)),
-          pdfSection('Anlagennummer', valueOf(plantNumberController)),
-          pdfSection('Modulfeld', valueOf(moduleFieldController)),
-          pdfSection('Wechselrichter', valueOf(inverterController)),
-          pdfSection('Modulhersteller', valueOf(moduleManufacturerController)),
-          pdfSection('Modultyp', valueOf(moduleTypeController)),
-          pdfSection('Anzahl Module', valueOf(moduleCountController)),
-          pdfSection('Generatorleistung', valueOf(generatorPowerController)),
-          pdfSection('Monteur', valueOf(technicianController)),
-          pdfSection('Datum', valueOf(dateController)),
+          pdfSection(tr('Kunde', 'Customer'), valueOf(customerController)),
+          pdfSection(
+            tr('Objekt / Standort', 'Site / Location'),
+            valueOf(objectController),
+          ),
+          pdfSection(
+            tr('Anlagennummer', 'System number'),
+            valueOf(plantNumberController),
+          ),
+          pdfSection(
+            tr('Modulfeld', 'PV array'),
+            valueOf(moduleFieldController),
+          ),
+          pdfSection(
+            tr('Wechselrichter', 'Inverter'),
+            valueOf(inverterController),
+          ),
+          pdfSection(
+            tr('Modulhersteller', 'Module manufacturer'),
+            valueOf(moduleManufacturerController),
+          ),
+          pdfSection(
+            tr('Modultyp', 'Module type'),
+            valueOf(moduleTypeController),
+          ),
+          pdfSection(
+            tr('Anzahl Module', 'Number of modules'),
+            valueOf(moduleCountController),
+          ),
+          pdfSection(
+            tr('Generatorleistung', 'Generator capacity'),
+            valueOf(generatorPowerController),
+          ),
+          pdfSection(
+            tr('Monteur', 'Technician'),
+            valueOf(technicianController),
+          ),
+          pdfSection(tr('Datum', 'Date'), valueOf(dateController)),
 
           pw.SizedBox(height: 18),
-          pw.Text('1. Sichtprüfung',
-              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-          pdfCheck('Module sichtbar unbeschädigt', modulesOk),
-          pdfCheck('Leitungen geprüft', cablesOk),
-          pdfCheck('Steckverbinder geprüft', plugsOk),
-          pdfCheck('Kennzeichnung vorhanden', labelingOk),
-          pdfCheck('DC-Trennstelle / Schaltgerät vorhanden', dcSwitchOk),
-          pdfCheck('Erdung / Potentialausgleich geprüft', groundingOk),
-          pdfCheck('Schutzmaßnahmen geprüft', protectionOk),
-          pdfCheck('Warnhinweise / Beschilderung geprüft', warningSignsOk),
-          pdfSection('Bemerkung Sichtprüfung', valueOf(visualNoteController)),
+          pw.Text(
+            tr('1. Sichtprüfung', '1. Visual inspection'),
+            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+          ),
+          pdfCheck(
+            tr('Module sichtbar unbeschädigt', 'Modules visibly undamaged'),
+            modulesOk,
+          ),
+          pdfCheck(tr('Leitungen geprüft', 'Cables checked'), cablesOk),
+          pdfCheck(tr('Steckverbinder geprüft', 'Connectors checked'), plugsOk),
+          pdfCheck(
+            tr('Kennzeichnung vorhanden', 'Labelling present'),
+            labelingOk,
+          ),
+          pdfCheck(
+            tr(
+              'DC-Trennstelle / Schaltgerät vorhanden',
+              'DC isolator / switching device present',
+            ),
+            dcSwitchOk,
+          ),
+          pdfCheck(
+            tr(
+              'Erdung / Potentialausgleich geprüft',
+              'Grounding / equipotential bonding checked',
+            ),
+            groundingOk,
+          ),
+          pdfCheck(
+            tr('Schutzmaßnahmen geprüft', 'Protective measures checked'),
+            protectionOk,
+          ),
+          pdfCheck(
+            tr(
+              'Warnhinweise / Beschilderung geprüft',
+              'Warnings / signage checked',
+            ),
+            warningSignsOk,
+          ),
+          pdfSection(
+            tr('Bemerkung Sichtprüfung', 'Visual inspection notes'),
+            valueOf(visualNoteController),
+          ),
           if (visualInspectionPhotoBytes.isNotEmpty) ...[
             pw.SizedBox(height: 10),
             pw.Text(
-              'Fotos Sichtprüfung',
+              tr('Fotos Sichtprüfung', 'Visual inspection photos'),
               style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
             ),
             pw.SizedBox(height: 6),
@@ -371,58 +468,100 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
                   decoration: pw.BoxDecoration(
                     border: pw.Border.all(width: 0.5),
                   ),
-                  child: pw.Image(
-                    pw.MemoryImage(bytes),
-                    fit: pw.BoxFit.cover,
-                  ),
+                  child: pw.Image(pw.MemoryImage(bytes), fit: pw.BoxFit.cover),
                 );
               }).toList(),
             ),
           ],
 
           pw.SizedBox(height: 18),
-          pw.Text('2. Erproben / Funktionsprüfung',
-              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-          pdfCheck('Wechselrichter Funktion geprüft', inverterFunctionOk),
-          pdfCheck('DC-Trennschalter geprüft', dcDisconnectOk),
-          pdfCheck('AC-Trennstelle geprüft', acDisconnectOk),
-          pdfCheck('Monitoring / Kommunikation geprüft', monitoringOk),
-          pdfCheck('Abschaltung / Schaltfunktion geprüft', shutdownOk),
-          pdfSection('Bemerkung Erproben', valueOf(functionNoteController)),
+          pw.Text(
+            tr('2. Erproben / Funktionsprüfung', '2. Functional testing'),
+            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+          ),
+          pdfCheck(
+            tr('Wechselrichter Funktion geprüft', 'Inverter function checked'),
+            inverterFunctionOk,
+          ),
+          pdfCheck(
+            tr('DC-Trennschalter geprüft', 'DC isolator checked'),
+            dcDisconnectOk,
+          ),
+          pdfCheck(
+            tr('AC-Trennstelle geprüft', 'AC isolator checked'),
+            acDisconnectOk,
+          ),
+          pdfCheck(
+            tr(
+              'Monitoring / Kommunikation geprüft',
+              'Monitoring / communication checked',
+            ),
+            monitoringOk,
+          ),
+          pdfCheck(
+            tr(
+              'Abschaltung / Schaltfunktion geprüft',
+              'Shutdown / switching function checked',
+            ),
+            shutdownOk,
+          ),
+          pdfSection(
+            tr('Bemerkung Erproben', 'Functional test notes'),
+            valueOf(functionNoteController),
+          ),
 
           pw.SizedBox(height: 18),
-          pw.Text('3. Messungen',
-              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            tr('3. Messungen', '3. Measurements'),
+            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+          ),
           pw.SizedBox(height: 8),
           measurementTable(),
           pw.SizedBox(height: 12),
-          pdfSection('Bemerkung Messung', valueOf(measurementNoteController)),
+          pdfSection(
+            tr('Bemerkung Messung', 'Measurement notes'),
+            valueOf(measurementNoteController),
+          ),
 
           pw.SizedBox(height: 18),
-          pw.Text('4. Prüfergebnis',
-              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-          pdfSection('Ergebnis',
-              testPassed ? 'PV-Anlage bestanden' : 'PV-Anlage nicht bestanden'),
-          pdfSection('Bemerkung Ergebnis', valueOf(resultNoteController)),
-          pdfSection('Allgemeine Bemerkung', valueOf(generalNoteController)),
+          pw.Text(
+            tr('4. Prüfergebnis', '4. Test result'),
+            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+          ),
+          pdfSection(
+            tr('Ergebnis', 'Result'),
+            testPassed
+                ? tr('PV-Anlage bestanden', 'PV system passed')
+                : tr('PV-Anlage nicht bestanden', 'PV system failed'),
+          ),
+          pdfSection(
+            tr('Bemerkung Ergebnis', 'Result notes'),
+            valueOf(resultNoteController),
+          ),
+          pdfSection(
+            tr('Allgemeine Bemerkung', 'General notes'),
+            valueOf(generalNoteController),
+          ),
 
           pw.SizedBox(height: 18),
-          pw.Text('5. Unterschriften',
-              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            tr('5. Unterschriften', '5. Signatures'),
+            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+          ),
           pw.SizedBox(height: 10),
           pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Expanded(
                 child: signaturePdfBox(
-                  title: 'Unterschrift Monteur',
+                  title: tr('Unterschrift Monteur', 'Technician signature'),
                   bytes: technicianSignatureBytes,
                 ),
               ),
               pw.SizedBox(width: 20),
               pw.Expanded(
                 child: signaturePdfBox(
-                  title: 'Unterschrift Kunde',
+                  title: tr('Unterschrift Kunde', 'Customer signature'),
                   bytes: customerSignatureBytes,
                 ),
               ),
@@ -431,7 +570,10 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
 
           pw.SizedBox(height: 14),
           pw.Text(
-            'Hinweis: Die Ergebnisse und Unterschriften wurden digital erfasst und sind vor Weitergabe fachlich zu prüfen.',
+            tr(
+              'Hinweis: Die Ergebnisse und Unterschriften wurden digital erfasst und sind vor Weitergabe fachlich zu prüfen.',
+              'Note: The results and signatures were recorded digitally and must be professionally reviewed before distribution.',
+            ),
             style: const pw.TextStyle(fontSize: 9),
           ),
         ],
@@ -449,7 +591,12 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
       pdfPath = file.path;
     });
 
-    showMessage('PDF-Abnahmeprotokoll wurde erstellt.');
+    showMessage(
+      tr(
+        'PDF-Abnahmeprotokoll wurde erstellt.',
+        'The PV acceptance report PDF has been created.',
+      ),
+    );
   }
 
   pw.Widget pdfSection(String title, String content) {
@@ -460,8 +607,10 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
         children: [
           pw.SizedBox(
             width: 155,
-            child: pw.Text(title,
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+            child: pw.Text(
+              title,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
           ),
           pw.Expanded(child: pw.Text(content)),
         ],
@@ -490,8 +639,8 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
           tableHeader('Voc [V DC]'),
           tableHeader('Isc [A]'),
           tableHeader('Riso [MOhm]'),
-          tableHeader('Polarität'),
-          tableHeader('Ergebnis'),
+          tableHeader(tr('Polarität', 'Polarity')),
+          tableHeader(tr('Ergebnis', 'Result')),
         ],
       ),
     ];
@@ -505,7 +654,7 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
             tableCell(valueOf(iscControllers[i])),
             tableCell(valueOf(risoControllers[i])),
             tableCell(polarityOk[i] ? 'OK' : '-'),
-            tableCell(stringOk[i] ? 'Bestanden' : '-'),
+            tableCell(stringOk[i] ? tr('Bestanden', 'Passed') : '-'),
           ],
         ),
       );
@@ -553,7 +702,9 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
           width: double.infinity,
           decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.5)),
           child: bytes == null
-              ? pw.Center(child: pw.Text('Keine Unterschrift'))
+              ? pw.Center(
+            child: pw.Text(tr('Keine Unterschrift', 'No signature')),
+          )
               : pw.Image(pw.MemoryImage(bytes), fit: pw.BoxFit.contain),
         ),
       ],
@@ -562,7 +713,12 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
 
   Future<void> openPdf() async {
     if (pdfPath == null) {
-      showMessage('Bitte zuerst Abnahmeprotokoll erstellen.');
+      showMessage(
+        tr(
+          'Bitte zuerst Abnahmeprotokoll erstellen.',
+          'Please create the acceptance report first.',
+        ),
+      );
       return;
     }
 
@@ -571,7 +727,9 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
 
   void showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void resetAll() {
@@ -634,25 +792,43 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
         color: green,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('PV-Abnahmeprotokoll',
-              style: TextStyle(
-                  color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-          SizedBox(height: 8),
-          Text('Sichtprüfung · Erproben · Messen',
-              style: TextStyle(color: Colors.white, fontSize: 18)),
-          SizedBox(height: 6),
-          Text('Dokumentation nach DIN EN 62446',
-              style: TextStyle(color: Colors.white70, fontSize: 14)),
+          Text(
+            tr('PV-Abnahmeprotokoll', 'PV Acceptance Report'),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            tr(
+              'Sichtprüfung · Erproben · Messen',
+              'Visual inspection · Functional testing · Measurements',
+            ),
+            style: const TextStyle(color: Colors.white, fontSize: 18),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            tr(
+              'Dokumentation nach DIN EN 62446',
+              'Documentation according to DIN EN 62446',
+            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
+          ),
         ],
       ),
     );
   }
 
-  Widget inputField(String label, TextEditingController controller,
-      {int maxLines = 1}) {
+  Widget inputField(
+      String label,
+      TextEditingController controller, {
+        int maxLines = 1,
+      }) {
     final active = activeSpeechController == controller && isListening;
 
     return Padding(
@@ -671,9 +847,11 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
           ),
           const SizedBox(width: 8),
           IconButton.filled(
-            onPressed: active ? stopSpeechInput : () => startSpeechInput(controller),
+            onPressed: active
+                ? stopSpeechInput
+                : () => startSpeechInput(controller),
             icon: Icon(active ? Icons.stop : Icons.mic),
-            tooltip: 'Spracheingabe',
+            tooltip: tr('Spracheingabe', 'Voice input'),
           ),
         ],
       ),
@@ -701,20 +879,37 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Anlagendaten',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(
+              tr('Anlagendaten', 'System details'),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
-            inputField('Kunde', customerController),
-            inputField('Objekt / Standort', objectController),
-            inputField('Anlagennummer', plantNumberController),
-            inputField('Modulfeld', moduleFieldController),
-            inputField('Wechselrichter', inverterController),
-            inputField('Modulhersteller', moduleManufacturerController),
-            inputField('Modultyp', moduleTypeController),
-            inputField('Anzahl Module', moduleCountController),
-            inputField('Generatorleistung (kWp)', generatorPowerController),
-            inputField('Monteur', technicianController),
-            inputField('Datum', dateController),
+            inputField(tr('Kunde', 'Customer'), customerController),
+            inputField(
+              tr('Objekt / Standort', 'Site / Location'),
+              objectController,
+            ),
+            inputField(
+              tr('Anlagennummer', 'System number'),
+              plantNumberController,
+            ),
+            inputField(tr('Modulfeld', 'PV array'), moduleFieldController),
+            inputField(tr('Wechselrichter', 'Inverter'), inverterController),
+            inputField(
+              tr('Modulhersteller', 'Module manufacturer'),
+              moduleManufacturerController,
+            ),
+            inputField(tr('Modultyp', 'Module type'), moduleTypeController),
+            inputField(
+              tr('Anzahl Module', 'Number of modules'),
+              moduleCountController,
+            ),
+            inputField(
+              tr('Generatorleistung (kWp)', 'Generator capacity (kWp)'),
+              generatorPowerController,
+            ),
+            inputField(tr('Monteur', 'Technician'), technicianController),
+            inputField(tr('Datum', 'Date'), dateController),
           ],
         ),
       ),
@@ -728,18 +923,40 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Prüfübersicht',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(
+              tr('Prüfübersicht', 'Inspection overview'),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 10),
-            Text('Sichtprüfung: ${completedVisualChecks()} von 8 Punkten erledigt'),
-            Text('Erproben: ${completedFunctionChecks()} von 5 Punkten erledigt'),
-            Text('Messungen: ${completedMeasurements()} von 120 Punkten erledigt'),
+            Text(
+              tr(
+                'Sichtprüfung: ${completedVisualChecks()} von 8 Punkten erledigt',
+                'Visual inspection: ${completedVisualChecks()} of 8 items completed',
+              ),
+            ),
+            Text(
+              tr(
+                'Erproben: ${completedFunctionChecks()} von 5 Punkten erledigt',
+                'Functional testing: ${completedFunctionChecks()} of 5 items completed',
+              ),
+            ),
+            Text(
+              tr(
+                'Messungen: ${completedMeasurements()} von 120 Punkten erledigt',
+                'Measurements: ${completedMeasurements()} of 120 items completed',
+              ),
+            ),
             const Divider(),
-            const Text('Prüfablauf:'),
-            const Text('1. Sichtprüfung'),
-            const Text('2. Erproben / Funktionsprüfung'),
-            const Text('3. Stringmessungen'),
-            const Text('4. Prüfergebnis und Unterschrift'),
+            Text(tr('Prüfablauf:', 'Inspection sequence:')),
+            Text(tr('1. Sichtprüfung', '1. Visual inspection')),
+            Text(tr('2. Erproben / Funktionsprüfung', '2. Functional testing')),
+            Text(tr('3. Stringmessungen', '3. String measurements')),
+            Text(
+              tr(
+                '4. Prüfergebnis und Unterschrift',
+                '4. Test result and signatures',
+              ),
+            ),
           ],
         ),
       ),
@@ -755,7 +972,12 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
           FilledButton.icon(
             onPressed: takeVisualInspectionPhoto,
             icon: const Icon(Icons.camera_alt),
-            label: const Text('Foto zur Sichtprüfung aufnehmen'),
+            label: Text(
+              tr(
+                'Foto zur Sichtprüfung aufnehmen',
+                'Take visual inspection photo',
+              ),
+            ),
           ),
           if (visualInspectionPhotos.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -786,7 +1008,7 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
                       child: IconButton.filledTonal(
                         onPressed: () => removeVisualInspectionPhoto(index),
                         icon: const Icon(Icons.close),
-                        tooltip: 'Foto entfernen',
+                        tooltip: tr('Foto entfernen', 'Remove photo'),
                       ),
                     ),
                   ],
@@ -803,48 +1025,78 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
     return Card(
       child: Column(
         children: [
-          const ListTile(
-            title: Text('1. Sichtprüfung',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            subtitle: Text('Sichtbare und organisatorische Prüfpunkte.'),
+          ListTile(
+            title: Text(
+              tr('1. Sichtprüfung', '1. Visual inspection'),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              tr(
+                'Sichtbare und organisatorische Prüfpunkte.',
+                'Visual and organisational inspection items.',
+              ),
+            ),
           ),
           checkTile(
-              title: 'Module sichtbar unbeschädigt',
-              value: modulesOk,
-              onChanged: (v) => setState(() => modulesOk = v ?? false)),
+            title: tr(
+              'Module sichtbar unbeschädigt',
+              'Modules visibly undamaged',
+            ),
+            value: modulesOk,
+            onChanged: (v) => setState(() => modulesOk = v ?? false),
+          ),
           checkTile(
-              title: 'Leitungen geprüft',
-              value: cablesOk,
-              onChanged: (v) => setState(() => cablesOk = v ?? false)),
+            title: tr('Leitungen geprüft', 'Cables checked'),
+            value: cablesOk,
+            onChanged: (v) => setState(() => cablesOk = v ?? false),
+          ),
           checkTile(
-              title: 'Steckverbinder geprüft',
-              value: plugsOk,
-              onChanged: (v) => setState(() => plugsOk = v ?? false)),
+            title: tr('Steckverbinder geprüft', 'Connectors checked'),
+            value: plugsOk,
+            onChanged: (v) => setState(() => plugsOk = v ?? false),
+          ),
           checkTile(
-              title: 'Kennzeichnung vorhanden',
-              value: labelingOk,
-              onChanged: (v) => setState(() => labelingOk = v ?? false)),
+            title: tr('Kennzeichnung vorhanden', 'Labelling present'),
+            value: labelingOk,
+            onChanged: (v) => setState(() => labelingOk = v ?? false),
+          ),
           checkTile(
-              title: 'DC-Trennstelle / Schaltgerät vorhanden',
-              value: dcSwitchOk,
-              onChanged: (v) => setState(() => dcSwitchOk = v ?? false)),
+            title: tr(
+              'DC-Trennstelle / Schaltgerät vorhanden',
+              'DC isolator / switching device present',
+            ),
+            value: dcSwitchOk,
+            onChanged: (v) => setState(() => dcSwitchOk = v ?? false),
+          ),
           checkTile(
-              title: 'Erdung / Potentialausgleich geprüft',
-              value: groundingOk,
-              onChanged: (v) => setState(() => groundingOk = v ?? false)),
+            title: tr(
+              'Erdung / Potentialausgleich geprüft',
+              'Grounding / equipotential bonding checked',
+            ),
+            value: groundingOk,
+            onChanged: (v) => setState(() => groundingOk = v ?? false),
+          ),
           checkTile(
-              title: 'Schutzmaßnahmen geprüft',
-              value: protectionOk,
-              onChanged: (v) => setState(() => protectionOk = v ?? false)),
+            title: tr('Schutzmaßnahmen geprüft', 'Protective measures checked'),
+            value: protectionOk,
+            onChanged: (v) => setState(() => protectionOk = v ?? false),
+          ),
           checkTile(
-              title: 'Warnhinweise / Beschilderung geprüft',
-              value: warningSignsOk,
-              onChanged: (v) => setState(() => warningSignsOk = v ?? false)),
+            title: tr(
+              'Warnhinweise / Beschilderung geprüft',
+              'Warnings / signage checked',
+            ),
+            value: warningSignsOk,
+            onChanged: (v) => setState(() => warningSignsOk = v ?? false),
+          ),
           visualPhotoSection(),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: inputField('Bemerkung Sichtprüfung', visualNoteController,
-                maxLines: 3),
+            child: inputField(
+              tr('Bemerkung Sichtprüfung', 'Visual inspection notes'),
+              visualNoteController,
+              maxLines: 3,
+            ),
           ),
         ],
       ),
@@ -855,35 +1107,59 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
     return Card(
       child: Column(
         children: [
-          const ListTile(
-            title: Text('2. Erproben / Funktionsprüfung',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            subtitle: Text('Schalt-, Schutz- und Funktionsprüfungen.'),
+          ListTile(
+            title: Text(
+              tr('2. Erproben / Funktionsprüfung', '2. Functional testing'),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              tr(
+                'Schalt-, Schutz- und Funktionsprüfungen.',
+                'Switching, protection and functional tests.',
+              ),
+            ),
           ),
           checkTile(
-              title: 'Wechselrichter Funktion geprüft',
-              value: inverterFunctionOk,
-              onChanged: (v) => setState(() => inverterFunctionOk = v ?? false)),
+            title: tr(
+              'Wechselrichter Funktion geprüft',
+              'Inverter function checked',
+            ),
+            value: inverterFunctionOk,
+            onChanged: (v) => setState(() => inverterFunctionOk = v ?? false),
+          ),
           checkTile(
-              title: 'DC-Trennschalter geprüft',
-              value: dcDisconnectOk,
-              onChanged: (v) => setState(() => dcDisconnectOk = v ?? false)),
+            title: tr('DC-Trennschalter geprüft', 'DC isolator checked'),
+            value: dcDisconnectOk,
+            onChanged: (v) => setState(() => dcDisconnectOk = v ?? false),
+          ),
           checkTile(
-              title: 'AC-Trennstelle geprüft',
-              value: acDisconnectOk,
-              onChanged: (v) => setState(() => acDisconnectOk = v ?? false)),
+            title: tr('AC-Trennstelle geprüft', 'AC isolator checked'),
+            value: acDisconnectOk,
+            onChanged: (v) => setState(() => acDisconnectOk = v ?? false),
+          ),
           checkTile(
-              title: 'Monitoring / Kommunikation geprüft',
-              value: monitoringOk,
-              onChanged: (v) => setState(() => monitoringOk = v ?? false)),
+            title: tr(
+              'Monitoring / Kommunikation geprüft',
+              'Monitoring / communication checked',
+            ),
+            value: monitoringOk,
+            onChanged: (v) => setState(() => monitoringOk = v ?? false),
+          ),
           checkTile(
-              title: 'Abschaltung / Schaltfunktion geprüft',
-              value: shutdownOk,
-              onChanged: (v) => setState(() => shutdownOk = v ?? false)),
+            title: tr(
+              'Abschaltung / Schaltfunktion geprüft',
+              'Shutdown / switching function checked',
+            ),
+            value: shutdownOk,
+            onChanged: (v) => setState(() => shutdownOk = v ?? false),
+          ),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: inputField('Bemerkung Erproben', functionNoteController,
-                maxLines: 3),
+            child: inputField(
+              tr('Bemerkung Erproben', 'Functional test notes'),
+              functionNoteController,
+              maxLines: 3,
+            ),
           ),
         ],
       ),
@@ -894,16 +1170,26 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
     return Card(
       child: Column(
         children: [
-          const ListTile(
-            title: Text('3. Messen',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            subtitle: Text('Je String: Voc, Isc, Riso, Polarität und Ergebnis.'),
+          ListTile(
+            title: Text(
+              tr('3. Messen', '3. Measurements'),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              tr(
+                'Je String: Voc, Isc, Riso, Polarität und Ergebnis.',
+                'For each string: Voc, Isc, Riso, polarity and result.',
+              ),
+            ),
           ),
           for (var i = 0; i < 24; i++) stringMeasurementBlock(i),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: inputField('Bemerkung Messung', measurementNoteController,
-                maxLines: 3),
+            child: inputField(
+              tr('Bemerkung Messung', 'Measurement notes'),
+              measurementNoteController,
+              maxLines: 3,
+            ),
           ),
         ],
       ),
@@ -921,11 +1207,8 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'PV-String Nr. $stringNumber',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              tr('PV-String Nr. $stringNumber', 'PV string no. $stringNumber'),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 10),
@@ -935,14 +1218,14 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
             CheckboxListTile(
               value: polarityOk[index],
               onChanged: (v) => setState(() => polarityOk[index] = v ?? false),
-              title: const Text('Polarität geprüft'),
+              title: Text(tr('Polarität geprüft', 'Polarity checked')),
               controlAffinity: ListTileControlAffinity.leading,
               activeColor: green,
             ),
             CheckboxListTile(
               value: stringOk[index],
               onChanged: (v) => setState(() => stringOk[index] = v ?? false),
-              title: const Text('String bestanden'),
+              title: Text(tr('String bestanden', 'String passed')),
               controlAffinity: ListTileControlAffinity.leading,
               activeColor: green,
             ),
@@ -959,8 +1242,10 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         const SizedBox(height: 8),
         Container(
           height: 150,
@@ -969,12 +1254,15 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
             borderRadius: BorderRadius.circular(8),
             color: Colors.white,
           ),
-          child: Signature(controller: controller, backgroundColor: Colors.white),
+          child: Signature(
+            controller: controller,
+            backgroundColor: Colors.white,
+          ),
         ),
         TextButton.icon(
           onPressed: controller.clear,
           icon: const Icon(Icons.delete),
-          label: const Text('Unterschrift löschen'),
+          label: Text(tr('Unterschrift löschen', 'Clear signature')),
         ),
         const SizedBox(height: 10),
       ],
@@ -988,29 +1276,42 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('4. Prüfergebnis und Unterschrift',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(
+              tr(
+                '4. Prüfergebnis und Unterschrift',
+                '4. Test result and signatures',
+              ),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             SwitchListTile(
               value: testPassed,
               onChanged: (value) => setState(() => testPassed = value),
-              title: Text(testPassed
-                  ? 'PV-Anlage bestanden'
-                  : 'PV-Anlage nicht bestanden'),
+              title: Text(
+                testPassed
+                    ? tr('PV-Anlage bestanden', 'PV system passed')
+                    : tr('PV-Anlage nicht bestanden', 'PV system failed'),
+              ),
               activeColor: green,
             ),
-            inputField('Bemerkung zum Prüfergebnis', resultNoteController,
-                maxLines: 3),
+            inputField(
+              tr('Bemerkung zum Prüfergebnis', 'Test result notes'),
+              resultNoteController,
+              maxLines: 3,
+            ),
             signatureBox(
-              title: 'Unterschrift Monteur',
+              title: tr('Unterschrift Monteur', 'Technician signature'),
               controller: technicianSignaturePad,
             ),
             signatureBox(
-              title: 'Unterschrift Kunde',
+              title: tr('Unterschrift Kunde', 'Customer signature'),
               controller: customerSignaturePad,
             ),
-            inputField('Allgemeine Bemerkung', generalNoteController,
-                maxLines: 3),
+            inputField(
+              tr('Allgemeine Bemerkung', 'General notes'),
+              generalNoteController,
+              maxLines: 3,
+            ),
           ],
         ),
       ),
@@ -1027,14 +1328,16 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
             FilledButton.icon(
               onPressed: createPdf,
               icon: const Icon(Icons.picture_as_pdf),
-              label: const Text('Abnahmeprotokoll erstellen'),
+              label: Text(
+                tr('Abnahmeprotokoll erstellen', 'Create acceptance report'),
+              ),
             ),
             if (pdfPath != null) ...[
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 onPressed: openPdf,
                 icon: const Icon(Icons.open_in_new),
-                label: const Text('PDF öffnen'),
+                label: Text(tr('PDF öffnen', 'Open PDF')),
               ),
             ],
           ],
@@ -1044,8 +1347,11 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
   }
 
   Widget infoText() {
-    return const Text(
-      'Ablauf: Sichtprüfung, Erproben, Messen und abschließendes Prüfergebnis mit digitaler Unterschrift dokumentieren.',
+    return Text(
+      tr(
+        'Ablauf: Sichtprüfung, Erproben, Messen und abschließendes Prüfergebnis mit digitaler Unterschrift dokumentieren.',
+        'Process: Document the visual inspection, functional tests, measurements and final test result with digital signatures.',
+      ),
       textAlign: TextAlign.center,
       style: TextStyle(fontSize: 13),
     );
@@ -1055,12 +1361,27 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PV-Abnahmeprotokoll'),
+        title: Text(tr('PV-Abnahmeprotokoll', 'PV Acceptance Report')),
         actions: [
+          Tooltip(
+            message: isEnglish ? 'Auf Deutsch wechseln' : 'Switch to English',
+            child: TextButton.icon(
+              onPressed: toggleLanguage,
+              icon: const Icon(Icons.language, color: Colors.white),
+              label: Text(
+                isEnglish ? 'DE' : 'EN',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+            ),
+          ),
           IconButton(
             onPressed: resetAll,
             icon: const Icon(Icons.refresh),
-            tooltip: 'Zurücksetzen',
+            tooltip: tr('Zurücksetzen', 'Reset'),
           ),
         ],
       ),
