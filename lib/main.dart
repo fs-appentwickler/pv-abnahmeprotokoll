@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
@@ -63,6 +63,7 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
 
   bool speechReady = false;
   bool isListening = false;
+  bool isOpeningCamera = false;
   TextEditingController? activeSpeechController;
 
   String? pdfPath;
@@ -204,18 +205,18 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
         .replaceAll(' Punkt ', ',')
         .replaceAll(' punkt ', ',');
     return (isEnglish
-        ? cleaned
-        .replaceAll(' comma ', ',')
-        .replaceAll(' period ', '.')
-        .replaceAll(' full stop ', '.')
-        : cleaned)
+            ? cleaned
+                .replaceAll(' comma ', ',')
+                .replaceAll(' period ', '.')
+                .replaceAll(' full stop ', '.')
+            : cleaned)
         .trim();
   }
 
   void setToday() {
     final now = DateTime.now();
     dateController.text =
-    '${now.day.toString().padLeft(2, '0')}.${now.month.toString().padLeft(2, '0')}.${now.year}';
+        '${now.day.toString().padLeft(2, '0')}.${now.month.toString().padLeft(2, '0')}.${now.year}';
   }
 
   @override
@@ -298,31 +299,54 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
   }
 
   Future<void> takeVisualInspectionPhoto() async {
-    final cameraStatus = await Permission.camera.request();
+    if (isOpeningCamera) return;
 
-    if (!cameraStatus.isGranted) {
+    setState(() => isOpeningCamera = true);
+
+    try {
+      // image_picker requests and handles the native camera permission on iOS.
+      final XFile? photo = await imagePicker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.rear,
+        imageQuality: 75,
+        maxWidth: 1600,
+      );
+
+      if (photo == null || !mounted) return;
+
+      setState(() {
+        visualInspectionPhotos.add(File(photo.path));
+      });
+    } on PlatformException catch (error) {
+      final permissionProblem = {
+        'camera_access_denied',
+        'camera_access_restricted',
+        'camera_access_denied_without_prompt',
+      }.contains(error.code);
+
+      showMessage(
+        permissionProblem
+            ? tr(
+                'Der Kamerazugriff ist nicht erlaubt. Bitte aktiviere ihn in den Einstellungen.',
+                'Camera access is not permitted. Please enable it in Settings.',
+              )
+            : tr(
+                'Die Kamera konnte nicht geöffnet werden. Bitte versuche es erneut.',
+                'The camera could not be opened. Please try again.',
+              ),
+      );
+    } catch (_) {
       showMessage(
         tr(
-          'Kameraberechtigung fehlt. Bitte in den Android-Einstellungen erlauben.',
-          'Camera permission is missing. Please allow it in the Android settings.',
+          'Beim Öffnen der Kamera ist ein unerwarteter Fehler aufgetreten.',
+          'An unexpected error occurred while opening the camera.',
         ),
       );
-      return;
+    } finally {
+      if (mounted) {
+        setState(() => isOpeningCamera = false);
+      }
     }
-
-    final XFile? photo = await imagePicker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 75,
-      maxWidth: 1600,
-    );
-
-    if (photo == null) {
-      return;
-    }
-
-    setState(() {
-      visualInspectionPhotos.add(File(photo.path));
-    });
   }
 
   void removeVisualInspectionPhoto(int index) {
@@ -334,10 +358,10 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
   Future<void> createPdf() async {
     final pdf = pw.Document();
 
-    final Uint8List? technicianSignatureBytes = await technicianSignaturePad
-        .toPngBytes();
-    final Uint8List? customerSignatureBytes = await customerSignaturePad
-        .toPngBytes();
+    final Uint8List? technicianSignatureBytes =
+        await technicianSignaturePad.toPngBytes();
+    final Uint8List? customerSignatureBytes =
+        await customerSignaturePad.toPngBytes();
 
     final visualInspectionPhotoBytes = <Uint8List>[];
     for (final photo in visualInspectionPhotos) {
@@ -367,7 +391,6 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
             ),
           ),
           pw.SizedBox(height: 20),
-
           pdfSection(tr('Kunde', 'Customer'), valueOf(customerController)),
           pdfSection(
             tr('Objekt / Standort', 'Site / Location'),
@@ -406,7 +429,6 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
             valueOf(technicianController),
           ),
           pdfSection(tr('Datum', 'Date'), valueOf(dateController)),
-
           pw.SizedBox(height: 18),
           pw.Text(
             tr('1. Sichtprüfung', '1. Visual inspection'),
@@ -473,7 +495,6 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
               }).toList(),
             ),
           ],
-
           pw.SizedBox(height: 18),
           pw.Text(
             tr('2. Erproben / Funktionsprüfung', '2. Functional testing'),
@@ -509,7 +530,6 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
             tr('Bemerkung Erproben', 'Functional test notes'),
             valueOf(functionNoteController),
           ),
-
           pw.SizedBox(height: 18),
           pw.Text(
             tr('3. Messungen', '3. Measurements'),
@@ -522,7 +542,6 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
             tr('Bemerkung Messung', 'Measurement notes'),
             valueOf(measurementNoteController),
           ),
-
           pw.SizedBox(height: 18),
           pw.Text(
             tr('4. Prüfergebnis', '4. Test result'),
@@ -542,7 +561,6 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
             tr('Allgemeine Bemerkung', 'General notes'),
             valueOf(generalNoteController),
           ),
-
           pw.SizedBox(height: 18),
           pw.Text(
             tr('5. Unterschriften', '5. Signatures'),
@@ -567,7 +585,6 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
               ),
             ],
           ),
-
           pw.SizedBox(height: 14),
           pw.Text(
             tr(
@@ -703,8 +720,8 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
           decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.5)),
           child: bytes == null
               ? pw.Center(
-            child: pw.Text(tr('Keine Unterschrift', 'No signature')),
-          )
+                  child: pw.Text(tr('Keine Unterschrift', 'No signature')),
+                )
               : pw.Image(pw.MemoryImage(bytes), fit: pw.BoxFit.contain),
         ),
       ],
@@ -825,10 +842,10 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
   }
 
   Widget inputField(
-      String label,
-      TextEditingController controller, {
-        int maxLines = 1,
-      }) {
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+  }) {
     final active = activeSpeechController == controller && isListening;
 
     return Padding(
@@ -847,9 +864,8 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
           ),
           const SizedBox(width: 8),
           IconButton.filled(
-            onPressed: active
-                ? stopSpeechInput
-                : () => startSpeechInput(controller),
+            onPressed:
+                active ? stopSpeechInput : () => startSpeechInput(controller),
             icon: Icon(active ? Icons.stop : Icons.mic),
             tooltip: tr('Spracheingabe', 'Voice input'),
           ),
@@ -970,7 +986,7 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           FilledButton.icon(
-            onPressed: takeVisualInspectionPhoto,
+            onPressed: isOpeningCamera ? null : takeVisualInspectionPhoto,
             icon: const Icon(Icons.camera_alt),
             label: Text(
               tr(
@@ -1210,7 +1226,6 @@ class _PvAbnahmePageState extends State<PvAbnahmePage> {
               tr('PV-String Nr. $stringNumber', 'PV string no. $stringNumber'),
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 10),
             inputField('Voc [V DC]', vocControllers[index]),
             inputField('Isc [A]', iscControllers[index]),
