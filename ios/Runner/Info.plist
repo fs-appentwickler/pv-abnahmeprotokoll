@@ -12,6 +12,8 @@
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>LSApplicationCategoryType</key>
+	<string></string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -32,6 +34,8 @@
 	<string>Erstellte Fotos und PDF-Dokumente dürfen in der Fotomediathek gespeichert werden.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Die Fotomediathek wird benötigt, um Bilder für die Dokumentation auszuwählen.</string>
+	<key>CFBundleGetInfoString</key>
+	<string></string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Die Spracherkennung wird zur Eingabe von Prüfwerten und Bemerkungen verwendet.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
@@ -53,5 +57,26 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>de</string>
+	</array>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 </dict>
 </plist>
